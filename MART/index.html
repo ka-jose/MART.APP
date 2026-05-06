@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#3b5740"/>
+  <meta name="description" content="Mart — Smart Shopping List App. Track prices, get AI suggestions, shop smarter."/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Mart"/>
+  <title>Mart 🛒</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --cream:#f6f1e9;--cream-dk:#ece4d4;--white:#fff;
+      --ink:#1e1a14;--ink-soft:#4a4236;--ink-muted:#9a8e7e;
+      --olive:#3b5740;--olive-lt:#587a5c;--olive-pale:#d6e8d7;
+      --rust:#c0501a;--rust-pale:#f5ddd0;
+      --gold:#b8892a;--gold-pale:#f5edcc;
+      --sky:#1a6fa0;--sky-pale:#d0e8f5;
+      --purple:#6b3fa0;--purple-pale:#e8d8f8;
+      --red:#ae3a2c;--border:rgba(30,26,20,.1);
+      --shadow:0 2px 12px rgba(30,26,20,.09);
+      --r:14px;--r-sm:9px;--ease:.22s cubic-bezier(.4,0,.2,1);
+    }
+    body.shopping-on{--cream:#edf4ed;--cream-dk:#deeade}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:16px}
+    body{font-family:'DM Sans','Segoe UI',system-ui,sans-serif;background:var(--cream);color:var(--ink);min-height:100dvh;display:flex;flex-direction:column;transition:background var(--ease);background-image:radial-gradient(ellipse at 15% 85%,rgba(59,87,64,.05) 0%,transparent 55%),radial-gradient(ellipse at 85% 10%,rgba(192,80,26,.05) 0%,transparent 55%)}
+
+    /* ── Settings overlay & panel ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;opacity:0;pointer-events:none;transition:opacity var(--ease)}
+    .overlay.open{opacity:1;pointer-events:all}
+    .settings-panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100%);background:var(--white);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow-y:auto}
+    .settings-panel.open{transform:translateX(0)}
+    .sp-head{background:var(--olive);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .sp-head h3{font-family:'Caveat',cursive;font-size:1.6rem;font-weight:700}
+    .sp-close{background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;padding:4px;line-height:1;opacity:.8;transition:opacity var(--ease)}
+    .sp-close:hover{opacity:1}
+    .sp-body{padding:20px;display:flex;flex-direction:column;gap:22px;flex:1}
+    .sp-section h4{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-muted);margin-bottom:10px}
+    .sp-section p{font-size:.82rem;color:var(--ink-muted);line-height:1.5;margin-bottom:8px}
+    .sp-section a{color:var(--sky);text-decoration:none}
+    .sp-section a:hover{text-decoration:underline}
+    .sp-input{width:100%;padding:10px 12px;border:1.5px solid var(--cream-dk);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;color:var(--ink);background:var(--cream);outline:none;transition:border-color var(--ease),box-shadow var(--ease)}
+    .sp-input:focus{border-color:var(--olive-lt);box-shadow:0 0 0 3px var(--olive-pale)}
+    .sp-btn{width:100%;padding:11px;background:var(--olive);color:#fff;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:background var(--ease)}
+    .sp-btn:hover{background:var(--olive-lt)}
+    .sp-btn.secondary{background:var(--cream);color:var(--olive);border:1.5px solid var(--olive-lt)}
+    .sp-btn.secondary:hover{background:var(--olive-pale)}
+    .sp-btn.danger{background:none;color:var(--red);border:1.5px solid var(--red)}
+    .sp-btn.danger:hover{background:var(--red);color:#fff}
+    select.sp-input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%239a8e7e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+    .notif-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--cream);border-radius:var(--r-sm);border:1.5px solid var(--cream-dk)}
+    .notif-toggle-row span{font-size:.9rem;font-weight:500}
+    .mini-toggle{position:relative;width:42px;height:24px;cursor:pointer;display:inline-block;flex-shrink:0}
+    .mini-toggle input{opacity:0;width:0;height:0}
+    .mini-knob{position:absolute;inset:0;background:var(--cream-dk);border-radius:24px;transition:background var(--ease)}
+    .mini-knob::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform var(--ease);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .mini-toggle input:checked+.mini-knob{background:var(--olive)}
+    .mini-toggle input:checked+.mini-knob::before{transform:translateX(18px)}
+    .key-saved{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--olive);font-weight:600;margin-top:6px}
+    .key-saved .dot{width:8px;height:8px;background:var(--olive);border-radius:50%}
+    .sp-tag{display:inline-flex;align-items:center;gap:6px;background:var(--olive-pale);color:var(--olive);font-size:.78rem;font-weight:600;padding:6px 12px;border-radius:20px;margin-top:6px}
+    .sp-loc-row{display:flex;gap:8px;align-items:flex-end;margin-top:8px}
+    .sp-loc-row .sp-input{flex:1}
+    .sp-loc-row .sp-btn{width:auto;padding:10px 14px;white-space:nowrap}
+
+    /* ── Header ── */
+    .hdr{background:var(--olive);color:#fff;position:sticky;top:0;z-index:300;box-shadow:0 2px 16px rgba(0,0,0,.22)}
+    .hdr-inner{max-width:600px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+    .logo{display:flex;align-items:center;gap:7px;flex-shrink:0}
+    .logo-icon{font-size:1.4rem}
+    .logo-text{font-family:'Caveat',cursive;font-size:2rem;font-weight:700;line-height:1}
+    .logo-ver{font-size:.6rem;opacity:.6;align-self:flex-end;margin-bottom:3px}
+    .hdr-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+    .currency-pill{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 10px;cursor:pointer;font-size:.8rem;font-weight:600;color:#fff;transition:background var(--ease);white-space:nowrap}
+    .currency-pill:hover{background:rgba(255,255,255,.25)}
+    .hdr-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:1rem;line-height:1;transition:background var(--ease)}
+    .hdr-btn:hover{background:rgba(255,255,255,.28)}
+    .hdr-btn#installBtn{background:rgba(255,200,0,.25);border-color:rgba(255,200,0,.4)}
+    .mode-wrap{display:flex;align-items:center;gap:7px;flex-shrink:0}
+    .mode-lbl{font-size:.7rem;font-weight:500;opacity:.85;white-space:nowrap}
+    .toggle{position:relative;width:44px;height:24px;cursor:pointer;display:inline-block;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0}
+    .knob{position:absolute;inset:0;background:rgba(255,255,255,.22);border-radius:24px;transition:background var(--ease)}
+    .knob::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform var(--ease);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+    .toggle input:checked+.knob{background:var(--rust)}
+    .toggle input:checked+.knob::before{transform:translateX(20px)}
+
+    /* ── Banners ── */
+    .banner{text-align:center;padding:9px 18px;font-size:.83rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;animation:slideDown .28s ease}
+    .banner.shop{background:var(--rust);color:#fff}
+    .banner.inactive{background:var(--gold);color:var(--ink)}
+    .banner.inactive button{margin-left:auto;background:none;border:1.5px solid currentColor;border-radius:12px;padding:3px 10px;cursor:pointer;font-size:.75rem;font-weight:600;color:inherit;flex-shrink:0}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    .pulse-dot{width:7px;height:7px;background:currentColor;border-radius:50%;flex-shrink:0;animation:blink 1.3s infinite}
+    @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+
+    /* ── Toast ── */
+    .toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:900;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+    .toast{background:var(--ink);color:#fff;padding:10px 18px;border-radius:24px;font-size:.85rem;font-weight:500;animation:toastIn .3s ease;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+    .toast.warn{background:var(--gold);color:var(--ink)}
+    .toast.ok{background:var(--olive)}
+    .toast.err{background:var(--red)}
+    @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── Main layout ── */
+    main{max-width:600px;width:100%;margin:0 auto;padding:18px 14px 34px;display:flex;flex-direction:column;gap:14px;flex:1}
+    .card{background:var(--white);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);border:1px solid var(--border);transition:background var(--ease)}
+    .card-title{font-family:'Caveat',cursive;font-size:1.5rem;font-weight:700;color:var(--olive);margin-bottom:13px;line-height:1}
+
+    /* ── Add form ── */
+    .add-card{border-top:3px solid var(--olive)}
+    .form-row{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field.grow{flex:1 1 120px}.field.sm{flex:0 0 72px}
+    .field label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-muted)}
+    .field input{width:100%;padding:9px 11px;border:1.5px solid var(--cream-dk);border-radius:var(--r-sm);font-family:inherit;font-size:.93rem;color:var(--ink);background:var(--cream);outline:none;transition:border-color var(--ease),box-shadow var(--ease)}
+    .field input:focus{border-color:var(--olive-lt);box-shadow:0 0 0 3px var(--olive-pale)}
+    .field input::placeholder{color:var(--ink-muted);opacity:.5}
+    .form-actions{display:flex;gap:8px}
+    .btn-add{flex:1;padding:11px;background:var(--olive);color:#fff;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background var(--ease),transform var(--ease)}
+    .btn-add:hover{background:var(--olive-lt)}
+    .btn-add:active{transform:scale(.98)}
+    .btn-ai{padding:11px 13px;background:var(--sky);color:#fff;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:.84rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:background var(--ease),transform var(--ease)}
+    .btn-ai:hover{background:#1558a0}
+    .btn-ai:active{transform:scale(.98)}
+    .btn-ai:disabled{opacity:.55;cursor:not-allowed}
+
+    /* ── List card ── */
+    .list-card{border-top:3px solid var(--gold)}
+    .list-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;gap:8px;flex-wrap:wrap}
+    .list-hdr .card-title{margin-bottom:0}
+    .list-hdr-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+    .btn-sm{padding:6px 11px;border-radius:20px;font-family:inherit;font-size:.76rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;border:none;transition:background var(--ease),color var(--ease),transform var(--ease)}
+    .btn-sm:active{transform:scale(.96)}
+    .btn-deals{background:var(--sky);color:#fff}
+    .btn-deals:hover{background:#1558a0}
+    .btn-deals:disabled{opacity:.55;cursor:not-allowed}
+    .btn-clear-all{background:none;color:var(--red);border:1.5px solid var(--red)}
+    .btn-clear-all:hover{background:var(--red);color:#fff}
+    .s-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+    .empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 0;color:var(--ink-muted);text-align:center}
+    .empty-ico{font-size:2.1rem}
+    .empty p{font-size:.88rem;line-height:1.6}
+    .item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--cream);border-radius:var(--r-sm);border:1.5px solid var(--cream-dk);transition:all var(--ease);animation:fadeIn .23s ease;user-select:none}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+    body.shopping-on .item{cursor:pointer}
+    body.shopping-on .item:hover:not(.done){background:var(--olive-pale);border-color:var(--olive-lt)}
+    .item.done{opacity:.48;background:var(--cream-dk)}
+    .item.done .iname{text-decoration:line-through;color:var(--ink-muted)}
+    .item.done .iprice{color:var(--ink-muted)}
+    .icheck{width:21px;height:21px;border-radius:50%;border:2px solid var(--cream-dk);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;background:#fff;transition:all var(--ease)}
+    body.shopping-on .item:not(.done) .icheck{border-color:var(--olive-lt)}
+    .item.done .icheck{background:var(--olive);border-color:var(--olive);color:#fff}
+    .iinfo{flex:1;min-width:0}
+    .iname{font-size:.93rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color var(--ease)}
+    .imeta{font-size:.73rem;color:var(--ink-muted);margin-top:1px}
+    .iprice{font-size:.88rem;font-weight:600;color:var(--olive);white-space:nowrap}
+    .btn-rm{background:none;border:none;color:var(--ink-muted);font-size:1rem;cursor:pointer;padding:2px 3px;border-radius:4px;opacity:.4;transition:opacity var(--ease),color var(--ease);flex-shrink:0;line-height:1}
+    .btn-rm:hover{opacity:1;color:var(--red)}
+
+    /* ── AI Recommendations ── */
+    .ai-card{border-top:3px solid var(--sky);animation:fadeIn .3s ease}
+    .ai-card .card-title{color:var(--sky)}
+    .ai-loading{display:flex;align-items:center;gap:10px;padding:14px 0;color:var(--ink-muted);font-size:.9rem}
+    .spinner{width:20px;height:20px;border:2.5px solid var(--cream-dk);border-top-color:var(--sky);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .ai-store{padding:13px;background:var(--cream);border-radius:var(--r-sm);border:1.5px solid var(--cream-dk);margin-bottom:8px}
+    .ai-store-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
+    .badge{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:10px;flex-shrink:0;margin-top:2px}
+    .badge.online{background:var(--sky-pale);color:var(--sky)}
+    .badge.physical{background:var(--olive-pale);color:var(--olive)}
+    .ai-store-name{font-weight:600;font-size:.94rem}
+    .ai-store-url a{font-size:.78rem;color:var(--sky);word-break:break-all}
+    .ai-store-meta{font-size:.8rem;color:var(--ink-muted);line-height:1.5}
+    .ai-store-meta strong{color:var(--ink-soft)}
+    .ai-tips{margin-top:12px;padding:11px 13px;background:var(--gold-pale);border-radius:var(--r-sm);border-left:3px solid var(--gold)}
+    .ai-tips h5{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:6px}
+    .ai-tips li{font-size:.82rem;color:var(--ink-soft);line-height:1.55;margin-left:14px;margin-bottom:3px}
+    .ai-error{padding:12px;background:var(--rust-pale);border-radius:var(--r-sm);font-size:.84rem;color:var(--rust);line-height:1.5}
+
+    /* ── Save & Export card ── */
+    .save-card{border-top:3px solid var(--purple)}
+    .save-card .card-title{color:var(--purple)}
+    .export-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .export-btn{padding:12px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--cream);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all var(--ease);font-family:inherit}
+    .export-btn:hover{background:var(--purple-pale);border-color:var(--purple);transform:translateY(-1px);box-shadow:var(--shadow)}
+    .export-btn:active{transform:scale(.97)}
+    .export-btn .eb-icon{font-size:1.5rem}
+    .export-btn .eb-label{font-size:.76rem;font-weight:600;color:var(--ink-soft);text-align:center;line-height:1.3}
+    .export-btn .eb-sub{font-size:.68rem;color:var(--ink-muted)}
+    .import-row{margin-top:12px;padding:12px;background:var(--cream);border-radius:var(--r-sm);border:1.5px dashed var(--cream-dk);text-align:center}
+    .import-row p{font-size:.8rem;color:var(--ink-muted);margin-bottom:8px}
+    .import-row label{display:inline-block;padding:8px 16px;background:var(--purple);color:#fff;border-radius:var(--r-sm);font-size:.82rem;font-weight:600;cursor:pointer;transition:background var(--ease)}
+    .import-row label:hover{background:#5a30a0}
+    .import-row input{display:none}
+
+    /* ── Totals ── */
+    .totals-card{border-top:3px solid var(--rust)}
+    .totals-grid{display:flex;border-radius:var(--r-sm);overflow:hidden;border:1.5px solid var(--cream-dk)}
+    .tblock{flex:1;padding:13px 11px;background:var(--cream);display:flex;flex-direction:column;gap:3px}
+    .tblock+.tblock{border-left:1.5px solid var(--cream-dk)}
+    .tlbl{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-muted)}
+    .tval{font-family:'Caveat',cursive;font-size:1.75rem;font-weight:700;color:var(--ink);line-height:1.1;word-break:break-all}
+    .tval.spent{color:var(--rust)}
+    .savings{margin-top:10px;padding:8px 12px;border-radius:var(--r-sm);font-size:.82rem;font-weight:500;text-align:center;min-height:32px;display:flex;align-items:center;justify-content:center}
+    .savings.under{background:var(--olive-pale);color:var(--olive)}
+    .savings.over{background:var(--rust-pale);color:var(--rust)}
+    .savings.exact{background:var(--gold-pale);color:var(--gold)}
+
+    /* ── Notebook ── */
+    .note-card{border-top:3px solid var(--gold)}
+    .note-area{width:100%;min-height:110px;padding:11px 12px;border:1.5px solid var(--cream-dk);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem;line-height:1.65;color:var(--ink);background:var(--cream);resize:vertical;outline:none;transition:border-color var(--ease),box-shadow var(--ease)}
+    .note-area:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-pale)}
+    .note-area::placeholder{color:var(--ink-muted);opacity:.5}
+    .note-footer{display:flex;align-items:center;justify-content:space-between;margin-top:7px;gap:8px;flex-wrap:wrap}
+    .ccount{font-size:.72rem;color:var(--ink-muted)}
+    .note-footer-right{display:flex;gap:7px}
+    .btn-note-action{font-size:.73rem;font-weight:600;background:none;border:1.5px solid var(--cream-dk);border-radius:20px;padding:4px 10px;cursor:pointer;transition:all var(--ease);font-family:inherit;color:var(--ink-soft)}
+    .btn-note-action:hover{border-color:var(--olive-lt);color:var(--olive)}
+    .btn-nc{color:var(--ink-muted)}
+    .btn-nc:hover{border-color:var(--red);color:var(--red)}
+
+    /* ── Footer ── */
+    footer{text-align:center;padding:16px;font-size:.76rem;color:var(--ink-muted)}
+    .heart{color:var(--rust)}
+
+    @media(max-width:380px){.field.sm{flex:0 0 64px}.tval{font-size:1.5rem}.mode-lbl{display:none}.export-grid{grid-template-columns:1fr}}
+    @media(min-width:580px){.card{padding:22px 24px}main{padding:24px 16px 40px}}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+    .shake{animation:shake .35s ease}
+  </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- ── Settings Panel ── -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="sp-head">
+    <h3>⚙️ Settings</h3>
+    <button class="sp-close" id="closeSettings">✕</button>
+  </div>
+  <div class="sp-body">
+
+    <div class="sp-section">
+      <h4>🌍 Your Location</h4>
+      <p>Used to suggest nearby stores and Jumia availability.</p>
+      <div id="locTag"></div>
+      <div class="sp-loc-row">
+        <input class="sp-input" id="manualCountry" placeholder="Enter country name"/>
+        <button class="sp-btn secondary" id="setCountryBtn">Set</button>
+      </div>
+      <button class="sp-btn secondary" id="detectLocBtn" style="margin-top:8px">📍 Auto-detect</button>
+    </div>
+
+    <div class="sp-section">
+      <h4>💰 Currency</h4>
+      <p>Select your currency for all prices.</p>
+      <select class="sp-input" id="currencySelect"></select>
+    </div>
+
+    <div class="sp-section">
+      <h4>✨ Claude AI Key</h4>
+      <p>Powers price suggestions &amp; store recommendations. <a href="https://console.anthropic.com/" target="_blank">Get free key →</a></p>
+      <input class="sp-input" id="apiKeyInput" type="password" placeholder="sk-ant-..." autocomplete="off"/>
+      <div id="keyStatus" style="margin-top:6px"></div>
+      <button class="sp-btn" id="saveKeyBtn" style="margin-top:8px">Save Key</button>
+    </div>
+
+    <div class="sp-section">
+      <h4>🔔 Reminders</h4>
+      <p>Notified when you haven't shopped in 5+ days.</p>
+      <div class="notif-toggle-row">
+        <span>Shopping reminders</span>
+        <label class="mini-toggle">
+          <input type="checkbox" id="notifToggle"/>
+          <span class="mini-knob"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="sp-section">
+      <h4>⚠️ Danger Zone</h4>
+      <button class="sp-btn danger" id="resetAppBtn">Reset All Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ── -->
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">
+      <span class="logo-icon">🛒</span>
+      <span class="logo-text">Mart</span>
+      <span class="logo-ver">v1.0</span>
+    </div>
+    <div class="hdr-right">
+      <button class="currency-pill" id="currencyPill">
+        <span id="currSymDisplay">USh</span>
+        <span id="currCodeDisplay">UGX</span>
+        <span style="opacity:.7;font-size:.75rem">▾</span>
+      </button>
+      <button class="hdr-btn" id="installBtn" hidden title="Install App">📲</button>
+      <button class="hdr-btn" id="settingsBtn" title="Settings">⚙️</button>
+      <div class="mode-wrap">
+        <span class="mode-lbl">Shopping</span>
+        <label class="toggle">
+          <input type="checkbox" id="modeToggle"/>
+          <span class="knob"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="banner inactive" id="inactiveBanner" hidden>
+  <span>⏰</span>
+  <span id="inactiveMsg">You haven't shopped in a while!</span>
+  <button id="dismissInactive">Dismiss</button>
+</div>
+<div class="banner shop" id="shopBanner" hidden>
+  <span class="pulse-dot"></span>
+  Shopping mode <strong>ON</strong> — tap items to mark them off
+</div>
+
+<main>
+
+  <!-- Add Item -->
+  <section class="card add-card">
+    <h2 class="card-title">Add to List</h2>
+    <div class="form-row">
+      <div class="field grow">
+        <label for="iName">Item</label>
+        <input id="iName" type="text" placeholder="e.g. Cooking Oil" autocomplete="off"/>
+      </div>
+      <div class="field sm">
+        <label for="iQty">Qty</label>
+        <input id="iQty" type="number" value="1" min="1"/>
+      </div>
+      <div class="field sm">
+        <label for="iPrice" id="priceLabel">Est. Price</label>
+        <input id="iPrice" type="number" min="0" step="0.01" placeholder="0.00"/>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-add" id="addBtn">＋ Add Item</button>
+      <button class="btn-ai" id="aiPriceBtn">✨ Suggest</button>
+    </div>
+  </section>
+
+  <!-- AI Recommendations -->
+  <section class="card ai-card" id="aiCard" hidden>
+    <h2 class="card-title">✨ Best Deals Near You</h2>
+    <div id="aiContent"></div>
+  </section>
+
+  <!-- Shopping List -->
+  <section class="card list-card">
+    <div class="list-hdr">
+      <h2 class="card-title">My List</h2>
+      <div class="list-hdr-right">
+        <button class="btn-sm btn-deals" id="dealsBtn">✨ Best Deals</button>
+        <button class="btn-sm btn-clear-all" id="clearAll">Clear All</button>
+      </div>
+    </div>
+    <ul class="s-list" id="list">
+      <li class="empty" id="emptyEl">
+        <span class="empty-ico">🥦</span>
+        <p>Your list is empty.<br>Add something above!</p>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Save & Export -->
+  <section class="card save-card">
+    <h2 class="card-title">💾 Save &amp; Share</h2>
+    <div class="export-grid">
+      <button class="export-btn" id="exportCsvBtn">
+        <span class="eb-icon">📊</span>
+        <span class="eb-label">Download List</span>
+        <span class="eb-sub">CSV spreadsheet</span>
+      </button>
+      <button class="export-btn" id="shareWaBtn">
+        <span class="eb-icon">💬</span>
+        <span class="eb-label">Share on WhatsApp</span>
+        <span class="eb-sub">Send to contacts</span>
+      </button>
+      <button class="export-btn" id="copyListBtn">
+        <span class="eb-icon">📋</span>
+        <span class="eb-label">Copy List</span>
+        <span class="eb-sub">Copy to clipboard</span>
+      </button>
+      <button class="export-btn" id="exportNotesBtn">
+        <span class="eb-icon">📝</span>
+        <span class="eb-label">Save Notes</span>
+        <span class="eb-sub">.txt file</span>
+      </button>
+      <button class="export-btn" id="backupBtn">
+        <span class="eb-icon">🗄️</span>
+        <span class="eb-label">Full Backup</span>
+        <span class="eb-sub">JSON file</span>
+      </button>
+      <button class="export-btn" id="shareNativeBtn">
+        <span class="eb-icon">📤</span>
+        <span class="eb-label">Share App</span>
+        <span class="eb-sub">Send to a friend</span>
+      </button>
+    </div>
+    <div class="import-row">
+      <p>Restore from a previous backup file</p>
+      <label>
+        📂 Restore Backup
+        <input type="file" id="restoreInput" accept=".json"/>
+      </label>
+    </div>
+  </section>
+
+  <!-- Totals -->
+  <section class="card totals-card">
+    <h2 class="card-title">Summary</h2>
+    <div class="totals-grid">
+      <div class="tblock">
+        <span class="tlbl">Estimated Total</span>
+        <span class="tval" id="estTotal">0.00</span>
+      </div>
+      <div class="tblock">
+        <span class="tlbl">Actually Spent</span>
+        <span class="tval spent" id="actSpent">0.00</span>
+      </div>
+    </div>
+    <div class="savings" id="savingsRow"></div>
+  </section>
+
+  <!-- Notebook -->
+  <section class="card note-card">
+    <h2 class="card-title">📓 Notebook</h2>
+    <textarea class="note-area" id="notesTa" placeholder="Jot down anything... store hours, budget notes, recipes..." rows="5"></textarea>
+    <div class="note-footer">
+      <span class="ccount" id="ccount">0 characters</span>
+      <div class="note-footer-right">
+        <button class="btn-note-action" id="copyNotesBtn">Copy</button>
+        <button class="btn-note-action btn-nc" id="clearNotes">Clear</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Made with <span class="heart">&#9829;</span> &mdash; Mart &copy; 2025</footer>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════
+   CURRENCIES
+═══════════════════════════════════════ */
+const CURRENCIES=[
+  {code:'UGX',symbol:'USh',name:'Ugandan Shilling',cc:['UG']},
+  {code:'NGN',symbol:'₦',name:'Nigerian Naira',cc:['NG']},
+  {code:'KES',symbol:'KSh',name:'Kenyan Shilling',cc:['KE']},
+  {code:'GHS',symbol:'GH₵',name:'Ghanaian Cedi',cc:['GH']},
+  {code:'ZAR',symbol:'R',name:'South African Rand',cc:['ZA']},
+  {code:'EGP',symbol:'E£',name:'Egyptian Pound',cc:['EG']},
+  {code:'ETB',symbol:'Br',name:'Ethiopian Birr',cc:['ET']},
+  {code:'TZS',symbol:'TSh',name:'Tanzanian Shilling',cc:['TZ']},
+  {code:'RWF',symbol:'RF',name:'Rwandan Franc',cc:['RW']},
+  {code:'XOF',symbol:'CFA',name:'West African CFA',cc:['SN','CI','BJ','BF','ML','NE','TG']},
+  {code:'XAF',symbol:'FCFA',name:'Central African CFA',cc:['CM','CG','GA','TD']},
+  {code:'MAD',symbol:'DH',name:'Moroccan Dirham',cc:['MA']},
+  {code:'DZD',symbol:'DA',name:'Algerian Dinar',cc:['DZ']},
+  {code:'USD',symbol:'$',name:'US Dollar',cc:['US']},
+  {code:'CAD',symbol:'CA$',name:'Canadian Dollar',cc:['CA']},
+  {code:'MXN',symbol:'MX$',name:'Mexican Peso',cc:['MX']},
+  {code:'BRL',symbol:'R$',name:'Brazilian Real',cc:['BR']},
+  {code:'ARS',symbol:'$',name:'Argentine Peso',cc:['AR']},
+  {code:'COP',symbol:'COL$',name:'Colombian Peso',cc:['CO']},
+  {code:'EUR',symbol:'€',name:'Euro',cc:['DE','FR','IT','ES','NL','BE','AT','PT','GR','FI','IE']},
+  {code:'GBP',symbol:'£',name:'British Pound',cc:['GB']},
+  {code:'CHF',symbol:'CHF',name:'Swiss Franc',cc:['CH']},
+  {code:'SEK',symbol:'kr',name:'Swedish Krona',cc:['SE']},
+  {code:'NOK',symbol:'kr',name:'Norwegian Krone',cc:['NO']},
+  {code:'DKK',symbol:'kr',name:'Danish Krone',cc:['DK']},
+  {code:'PLN',symbol:'zł',name:'Polish Zloty',cc:['PL']},
+  {code:'TRY',symbol:'₺',name:'Turkish Lira',cc:['TR']},
+  {code:'JPY',symbol:'¥',name:'Japanese Yen',cc:['JP']},
+  {code:'CNY',symbol:'¥',name:'Chinese Yuan',cc:['CN']},
+  {code:'INR',symbol:'₹',name:'Indian Rupee',cc:['IN']},
+  {code:'KRW',symbol:'₩',name:'South Korean Won',cc:['KR']},
+  {code:'SGD',symbol:'S$',name:'Singapore Dollar',cc:['SG']},
+  {code:'THB',symbol:'฿',name:'Thai Baht',cc:['TH']},
+  {code:'IDR',symbol:'Rp',name:'Indonesian Rupiah',cc:['ID']},
+  {code:'PHP',symbol:'₱',name:'Philippine Peso',cc:['PH']},
+  {code:'MYR',symbol:'RM',name:'Malaysian Ringgit',cc:['MY']},
+  {code:'PKR',symbol:'₨',name:'Pakistani Rupee',cc:['PK']},
+  {code:'VND',symbol:'₫',name:'Vietnamese Dong',cc:['VN']},
+  {code:'AED',symbol:'AED',name:'UAE Dirham',cc:['AE']},
+  {code:'SAR',symbol:'SR',name:'Saudi Riyal',cc:['SA']},
+  {code:'QAR',symbol:'QR',name:'Qatari Riyal',cc:['QA']},
+  {code:'KWD',symbol:'KD',name:'Kuwaiti Dinar',cc:['KW']},
+  {code:'ILS',symbol:'₪',name:'Israeli Shekel',cc:['IL']},
+  {code:'AUD',symbol:'A$',name:'Australian Dollar',cc:['AU']},
+  {code:'NZD',symbol:'NZ$',name:'New Zealand Dollar',cc:['NZ']},
+];
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const S={
+  items:       load('mart_items')    || [],
+  currency:    load('mart_currency') || CURRENCIES[0],
+  shopping:    false,
+  notes:       load('mart_notes')    || '',
+  location:    load('mart_location') || null,
+  apiKey:      load('mart_apikey')   || '',
+  notifOn:     load('mart_notif')    !== false,
+  lastAct:     load('mart_last_act') || null,
+};
+
+/* ═══════════════════════════════════════
+   REFS
+═══════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+const iName=$('iName'),iQty=$('iQty'),iPrice=$('iPrice');
+const addBtn=$('addBtn'),aiPriceBtn=$('aiPriceBtn');
+const listEl=$('list'),emptyEl=$('emptyEl');
+const modeToggle=$('modeToggle'),shopBanner=$('shopBanner'),inactiveBanner=$('inactiveBanner');
+const estTotal=$('estTotal'),actSpent=$('actSpent'),savingsRow=$('savingsRow');
+const notesTa=$('notesTa'),ccount=$('ccount');
+const clearAll=$('clearAll'),clearNotes=$('clearNotes'),copyNotesBtn=$('copyNotesBtn');
+const dealsBtn=$('dealsBtn'),aiCard=$('aiCard'),aiContent=$('aiContent');
+const settingsBtn=$('settingsBtn'),closeSettings=$('closeSettings'),overlay=$('overlay'),settingsPanel=$('settingsPanel');
+const currencyPill=$('currencyPill'),currSymDisplay=$('currSymDisplay'),currCodeDisplay=$('currCodeDisplay');
+const currencySelect=$('currencySelect'),apiKeyInput=$('apiKeyInput'),keyStatus=$('keyStatus'),saveKeyBtn=$('saveKeyBtn');
+const notifToggle=$('notifToggle'),locTag=$('locTag'),manualCountry=$('manualCountry'),setCountryBtn=$('setCountryBtn'),detectLocBtn=$('detectLocBtn');
+const resetAppBtn=$('resetAppBtn'),dismissInactive=$('dismissInactive'),installBtn=$('installBtn');
+const exportCsvBtn=$('exportCsvBtn'),shareWaBtn=$('shareWaBtn'),copyListBtn=$('copyListBtn');
+const exportNotesBtn=$('exportNotesBtn'),backupBtn=$('backupBtn'),shareNativeBtn=$('shareNativeBtn');
+const restoreInput=$('restoreInput'),toastWrap=$('toastWrap');
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+(function init(){
+  CURRENCIES.forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.code;
+    o.textContent=c.symbol+' '+c.code+' – '+c.name;
+    currencySelect.appendChild(o);
+  });
+  currencySelect.value=S.currency.code;
+  if(S.apiKey) apiKeyInput.value=S.apiKey;
+  notifToggle.checked=S.notifOn;
+  updateKeyStatus();updateLocTag();updateCurrencyDisplay();updatePriceLabel();
+  notesTa.value=S.notes;updateCC();
+  render();updateTotals();
+  if(!S.location) detectLocation();
+  checkInactivity();
+})();
+
+/* ═══════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════ */
+settingsBtn.addEventListener('click',()=>{settingsPanel.classList.add('open');overlay.classList.add('open')});
+closeSettings.addEventListener('click',closeSet);
+overlay.addEventListener('click',closeSet);
+currencyPill.addEventListener('click',()=>{settingsPanel.classList.add('open');overlay.classList.add('open')});
+function closeSet(){settingsPanel.classList.remove('open');overlay.classList.remove('open')}
+
+currencySelect.addEventListener('change',()=>{
+  const c=CURRENCIES.find(x=>x.code===currencySelect.value);
+  if(!c)return;
+  S.currency=c;save('mart_currency',c);
+  updateCurrencyDisplay();updatePriceLabel();updateTotals();render();
+  toast('Currency changed to '+c.code,'ok');
+});
+function updateCurrencyDisplay(){currSymDisplay.textContent=S.currency.symbol;currCodeDisplay.textContent=S.currency.code}
+function updatePriceLabel(){$('priceLabel').textContent=S.currency.symbol+' Est.'}
+
+saveKeyBtn.addEventListener('click',()=>{
+  const k=apiKeyInput.value.trim();
+  if(!k){toast('Enter an API key first','warn');return}
+  S.apiKey=k;save('mart_apikey',k);updateKeyStatus();
+  toast('API key saved ✓','ok');closeSet();
+});
+function updateKeyStatus(){
+  keyStatus.innerHTML=S.apiKey
+    ?'<div class="key-saved"><span class="dot"></span>API key saved</div>'
+    :'<span style="font-size:.78rem;color:var(--ink-muted)">No key saved yet</span>';
+}
+
+notifToggle.addEventListener('change',()=>{
+  S.notifOn=notifToggle.checked;save('mart_notif',S.notifOn);
+  if(S.notifOn) requestNotifPerm();
+});
+
+detectLocBtn.addEventListener('click',()=>detectLocation(true));
+setCountryBtn.addEventListener('click',()=>{
+  const v=manualCountry.value.trim();
+  if(!v){toast('Enter a country','warn');return}
+  S.location={country_name:v,country_code:'',city:''};
+  save('mart_location',S.location);updateLocTag();manualCountry.value='';
+  toast('Location set to '+v,'ok');
+});
+function updateLocTag(){
+  locTag.innerHTML=S.location
+    ?'<div class="sp-tag">📍 '+(S.location.city?S.location.city+', ':'')+S.location.country_name+'</div>'
+    :'<span style="font-size:.82rem;color:var(--ink-muted)">Not detected yet</span>';
+}
+async function detectLocation(manual=false){
+  if(manual) toast('Detecting…','');
+  try{
+    const d=await(await fetch('https://ipapi.co/json/')).json();
+    if(d.country_name){
+      S.location={country_name:d.country_name,country_code:d.country_code||'',city:d.city||''};
+      save('mart_location',S.location);updateLocTag();
+      if(manual) toast('📍 '+(d.city?d.city+', ':'')+d.country_name,'ok');
+      const match=CURRENCIES.find(c=>c.cc.includes(d.country_code));
+      if(match&&!load('mart_currency')){
+        S.currency=match;save('mart_currency',match);
+        currencySelect.value=match.code;updateCurrencyDisplay();updatePriceLabel();updateTotals();render();
+      }
+    }
+  }catch(e){if(manual)toast('Could not detect location','warn')}
+}
+
+resetAppBtn.addEventListener('click',()=>{
+  if(!confirm('Delete ALL Mart data? This cannot be undone.'))return;
+  ['mart_items','mart_notes','mart_currency','mart_location','mart_apikey','mart_notif','mart_last_act'].forEach(k=>localStorage.removeItem(k));
+  location.reload();
+});
+
+/* ═══════════════════════════════════════
+   INACTIVITY
+═══════════════════════════════════════ */
+function checkInactivity(){
+  if(!S.lastAct||!S.items.length)return;
+  const days=(Date.now()-S.lastAct)/(864e5);
+  if(days>=5){
+    const d=Math.floor(days);
+    $('inactiveMsg').textContent=`You haven't shopped in ${d} day${d!==1?'s':''}. Your list is waiting!`;
+    inactiveBanner.hidden=false;
+    if(S.notifOn&&Notification.permission==='granted')
+      new Notification('Mart — Time to Shop! 🛒',{body:`It's been ${d} days. Check your list!`,tag:'mart'});
+  }
+}
+function bumpActivity(){S.lastAct=Date.now();save('mart_last_act',S.lastAct);inactiveBanner.hidden=true}
+async function requestNotifPerm(){
+  if('Notification'in window&&Notification.permission==='default'){
+    const p=await Notification.requestPermission();
+    toast(p==='granted'?'Notifications enabled ✓':'Notification permission denied',p==='granted'?'ok':'warn');
+  }
+}
+dismissInactive.addEventListener('click',()=>inactiveBanner.hidden=true);
+
+/* ═══════════════════════════════════════
+   PWA INSTALL
+═══════════════════════════════════════ */
+let deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredInstall=e;installBtn.hidden=false;
+});
+installBtn.addEventListener('click',async()=>{
+  if(!deferredInstall)return;
+  deferredInstall.prompt();
+  const{outcome}=await deferredInstall.userChoice;
+  if(outcome==='accepted')toast('App installed! 🎉','ok');
+  deferredInstall=null;installBtn.hidden=true;
+});
+
+/* ═══════════════════════════════════════
+   ADD ITEM
+═══════════════════════════════════════ */
+addBtn.addEventListener('click',addItem);
+iName.addEventListener('keydown',e=>e.key==='Enter'&&addItem());
+function addItem(){
+  const name=iName.value.trim();
+  const qty=Math.max(1,parseInt(iQty.value)||1);
+  const price=Math.max(0,parseFloat(iPrice.value)||0);
+  if(!name){shake(iName);iName.focus();return}
+  S.items.unshift({id:Date.now(),name,qty,price,done:false});
+  save('mart_items',S.items);bumpActivity();render();updateTotals();
+  iName.value='';iQty.value='1';iPrice.value='';iName.focus();
+}
+
+/* ═══════════════════════════════════════
+   AI: SUGGEST PRICE
+═══════════════════════════════════════ */
+aiPriceBtn.addEventListener('click',async()=>{
+  const name=iName.value.trim();
+  if(!name){shake(iName);iName.focus();toast('Enter an item name first','warn');return}
+  if(!S.apiKey){settingsPanel.classList.add('open');overlay.classList.add('open');toast('Add your Claude API key first','warn');return}
+  aiPriceBtn.disabled=true;aiPriceBtn.textContent='✨ …';
+  try{
+    const loc=S.location?(S.location.city?S.location.city+', ':'')+S.location.country_name:'unknown';
+    const p=`Estimate a realistic retail price for: "${name}"
+Currency: ${S.currency.name} (${S.currency.code})
+Location: ${loc}
+If Jumia operates here, use Jumia-range pricing.
+Respond ONLY with JSON: {"price":2500,"note":"Avg supermarket price"}`;
+    const data=await claudeCall(p,200);
+    const txt=data.content.find(b=>b.type==='text')?.text||'{}';
+    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(parsed.price){
+      iPrice.value=parsed.price;
+      toast(S.currency.symbol+parsed.price+(parsed.note?' · '+parsed.note:''),'ok');
+    }
+  }catch(e){toast('AI error: '+(e.message||'check API key'),'err')}
+  finally{aiPriceBtn.disabled=false;aiPriceBtn.innerHTML='✨ Suggest'}
+});
+
+/* ═══════════════════════════════════════
+   AI: BEST DEALS
+═══════════════════════════════════════ */
+dealsBtn.addEventListener('click',async()=>{
+  if(!S.items.length){toast('Add items first','warn');return}
+  if(!S.apiKey){settingsPanel.classList.add('open');overlay.classList.add('open');toast('Add your Claude API key first','warn');return}
+  aiCard.hidden=false;
+  aiContent.innerHTML='<div class="ai-loading"><div class="spinner"></div><span>Finding best deals near you…</span></div>';
+  aiCard.scrollIntoView({behavior:'smooth',block:'nearest'});
+  dealsBtn.disabled=true;
+  try{
+    const loc=S.location?(S.location.city?S.location.city+', ':'')+S.location.country_name:'unknown';
+    const itemsList=S.items.map(i=>`- ${i.name} (x${i.qty})`).join('\n');
+    const p=`You are a smart shopping assistant for a user in ${loc}.
+
+Shopping list:
+${itemsList}
+
+Currency: ${S.currency.name} (${S.currency.code}, symbol: ${S.currency.symbol})
+
+Suggest the 3 best places to buy these items (mix online + physical) specific to ${loc}.
+For African locations ALWAYS include Jumia with the exact country URL.
+Also include Jumia estimated prices where applicable.
+
+Respond ONLY with JSON (no markdown):
+{"stores":[{"name":"","type":"online","url":"","bestFor":[],"priceTip":"","savings":""}],"tips":[]}`;
+    const data=await claudeCall(p,1000);
+    const txt=data.content.find(b=>b.type==='text')?.text||'{}';
+    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    renderAI(parsed);
+  }catch(e){
+    aiContent.innerHTML=`<div class="ai-error">⚠️ ${esc(e.message||'Check your API key in Settings.')}</div>`;
+  }finally{dealsBtn.disabled=false}
+});
+
+function renderAI(d){
+  if(!d?.stores){aiContent.innerHTML='<div class="ai-error">No results. Try again.</div>';return}
+  let h='';
+  d.stores.forEach(s=>{
+    const b=s.type==='online'?'<span class="badge online">🌐 Online</span>':'<span class="badge physical">🏪 Physical</span>';
+    const url=s.url?`<div class="ai-store-url"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></div>`:'';
+    const bf=s.bestFor?.length?`<br><strong>Best for:</strong> ${esc(s.bestFor.join(', '))}`:'';
+    const sv=s.savings?`<br><strong>Savings:</strong> ${esc(s.savings)}`:'';
+    const pt=s.priceTip?`<br><strong>Tip:</strong> ${esc(s.priceTip)}`:'';
+    h+=`<div class="ai-store"><div class="ai-store-head">${b}<div><div class="ai-store-name">${esc(s.name)}</div>${url}</div></div><div class="ai-store-meta">${bf}${sv}${pt}</div></div>`;
+  });
+  if(d.tips?.length){
+    h+='<div class="ai-tips"><h5>💡 Money-saving tips</h5><ul>';
+    d.tips.forEach(t=>{h+=`<li>${esc(t)}</li>`});
+    h+='</ul></div>';
+  }
+  aiContent.innerHTML=h;
+}
+
+async function claudeCall(prompt,maxTokens=500){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||'API error '+r.status)}
+  return r.json();
+}
+
+/* ═══════════════════════════════════════
+   SAVE & EXPORT
+═══════════════════════════════════════ */
+exportCsvBtn.addEventListener('click',()=>{
+  if(!S.items.length){toast('Nothing to export','warn');return}
+  const rows=[['Item','Qty','Unit Price ('+S.currency.code+')','Total','Status']];
+  S.items.forEach(i=>rows.push([i.name,i.qty,i.price.toFixed(2),(i.price*i.qty).toFixed(2),i.done?'Bought':'Pending']));
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  dlFile('mart-list-'+today()+'.csv',csv,'text/csv;charset=utf-8');
+  toast('List downloaded as CSV ✓','ok');
+});
+
+shareWaBtn.addEventListener('click',()=>{
+  if(!S.items.length){toast('Nothing to share','warn');return}
+  const lines=S.items.map(i=>`• ${i.name} x${i.qty} — ${S.currency.symbol}${(i.price*i.qty).toFixed(2)}`).join('\n');
+  const total=S.items.reduce((s,i)=>s+i.price*i.qty,0);
+  const msg=`🛒 *My Shopping List* (Mart App)\n\n${lines}\n\n*Total: ${S.currency.symbol}${total.toFixed(2)}*\n\n_Made with Mart — the smart shopping app_`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+});
+
+copyListBtn.addEventListener('click',()=>{
+  if(!S.items.length){toast('Nothing to copy','warn');return}
+  const lines=S.items.map(i=>`• ${i.name} x${i.qty} — ${S.currency.symbol}${(i.price*i.qty).toFixed(2)}`).join('\n');
+  const total=S.items.reduce((s,i)=>s+i.price*i.qty,0);
+  const txt=`My Shopping List\n${new Date().toLocaleDateString()}\n\n${lines}\n\nTotal: ${S.currency.symbol}${total.toFixed(2)}`;
+  navigator.clipboard.writeText(txt).then(()=>toast('List copied to clipboard ✓','ok')).catch(()=>toast('Copy failed','err'));
+});
+
+exportNotesBtn.addEventListener('click',()=>{
+  if(!S.notes.trim()){toast('No notes to save','warn');return}
+  dlFile('mart-notes-'+today()+'.txt',S.notes,'text/plain;charset=utf-8');
+  toast('Notes downloaded ✓','ok');
+});
+
+backupBtn.addEventListener('click',()=>{
+  const backup={version:1,exportedAt:new Date().toISOString(),currency:S.currency,items:S.items,notes:S.notes,location:S.location};
+  dlFile('mart-backup-'+today()+'.json',JSON.stringify(backup,null,2),'application/json');
+  toast('Backup downloaded ✓','ok');
+});
+
+shareNativeBtn.addEventListener('click',async()=>{
+  const shareData={title:'Mart — Smart Shopping App',text:'I use Mart to manage my shopping list and find the best deals. Try it!',url:'https://github.com'};
+  if(navigator.share){try{await navigator.share(shareData);toast('Shared ✓','ok')}catch(_){}}
+  else{navigator.clipboard.writeText(shareData.text).then(()=>toast('App description copied!','ok'))}
+});
+
+restoreInput.addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.items){S.items=d.items;save('mart_items',S.items)}
+      if(d.notes!==undefined){S.notes=d.notes;save('mart_notes',S.notes);notesTa.value=S.notes;updateCC()}
+      if(d.currency){S.currency=d.currency;save('mart_currency',S.currency);currencySelect.value=d.currency.code;updateCurrencyDisplay();updatePriceLabel()}
+      render();updateTotals();
+      toast('Backup restored successfully ✓','ok');
+    }catch(_){toast('Invalid backup file','err')}
+    e.target.value='';
+  };
+  r.readAsText(f);
+});
+
+function dlFile(name,content,type){
+  const a=document.createElement('a');
+  const b=new Blob([content],{type});
+  a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+function today(){return new Date().toISOString().slice(0,10)}
+
+/* ═══════════════════════════════════════
+   LIST MANAGEMENT
+═══════════════════════════════════════ */
+function render(){
+  [...listEl.children].forEach(c=>c!==emptyEl&&c.remove());
+  if(!S.items.length){emptyEl.hidden=false;return}
+  emptyEl.hidden=true;
+  S.items.forEach(it=>listEl.appendChild(makeEl(it)));
+}
+function makeEl(it){
+  const li=document.createElement('li');
+  li.className='item'+(it.done?' done':'');
+  li.dataset.id=it.id;
+  li.innerHTML=`
+    <div class="icheck">${it.done?'&#10003;':''}</div>
+    <div class="iinfo">
+      <div class="iname">${esc(it.name)}</div>
+      <div class="imeta">Qty: ${it.qty} &middot; ${S.currency.symbol}${it.price.toFixed(2)} each</div>
+    </div>
+    <div class="iprice">${S.currency.symbol}${(it.price*it.qty).toFixed(2)}</div>
+    <button class="btn-rm" aria-label="Remove">&#10005;</button>`;
+  li.addEventListener('click',e=>{if(e.target.classList.contains('btn-rm'))return;if(!S.shopping)return;toggleItem(it.id)});
+  li.querySelector('.btn-rm').addEventListener('click',e=>{e.stopPropagation();removeItem(it.id)});
+  return li;
+}
+function toggleItem(id){
+  const it=S.items.find(i=>i.id===id);if(!it)return;
+  it.done=!it.done;save('mart_items',S.items);
+  const el=listEl.querySelector('[data-id="'+id+'"]');
+  if(el){el.classList.toggle('done',it.done);el.querySelector('.icheck').innerHTML=it.done?'&#10003;':''}
+  updateTotals();
+}
+function removeItem(id){S.items=S.items.filter(i=>i.id!==id);save('mart_items',S.items);render();updateTotals()}
+clearAll.addEventListener('click',()=>{
+  if(!S.items.length||!confirm('Clear all items?'))return;
+  S.items=[];save('mart_items',S.items);render();updateTotals();
+});
+modeToggle.addEventListener('change',()=>{
+  S.shopping=modeToggle.checked;
+  document.body.classList.toggle('shopping-on',S.shopping);
+  shopBanner.hidden=!S.shopping;
+  if(!S.shopping){S.items.forEach(i=>i.done=false);save('mart_items',S.items);render();updateTotals()}
+});
+
+/* ═══════════════════════════════════════
+   TOTALS
+═══════════════════════════════════════ */
+function fmt(n){return S.currency.symbol+n.toFixed(2)}
+function updateTotals(){
+  const est=S.items.reduce((s,i)=>s+i.price*i.qty,0);
+  const spent=S.items.filter(i=>i.done).reduce((s,i)=>s+i.price*i.qty,0);
+  estTotal.textContent=fmt(est);actSpent.textContent=fmt(spent);
+  savingsRow.className='savings';savingsRow.textContent='';
+  if(spent>0&&est>0){
+    const d=est-spent;
+    if(d>0){savingsRow.classList.add('under');savingsRow.textContent='🎉 '+fmt(d)+' under budget so far'}
+    else if(d<0){savingsRow.classList.add('over');savingsRow.textContent='⚠️ '+fmt(Math.abs(d))+' over estimate'}
+    else{savingsRow.classList.add('exact');savingsRow.textContent='✓ Exactly on budget'}
+  }else if(est>0){savingsRow.classList.add('under');savingsRow.textContent='Estimated total: '+fmt(est)}
+}
+
+/* ═══════════════════════════════════════
+   NOTEBOOK
+═══════════════════════════════════════ */
+notesTa.addEventListener('input',()=>{S.notes=notesTa.value;save('mart_notes',S.notes);updateCC()});
+clearNotes.addEventListener('click',()=>{if(!notesTa.value||!confirm('Clear notes?'))return;notesTa.value='';S.notes='';save('mart_notes','');updateCC()});
+copyNotesBtn.addEventListener('click',()=>{
+  if(!notesTa.value){toast('No notes to copy','warn');return}
+  navigator.clipboard.writeText(notesTa.value).then(()=>toast('Notes copied ✓','ok')).catch(()=>toast('Copy failed','err'));
+});
+function updateCC(){const n=notesTa.value.length;ccount.textContent=n+' character'+(n!==1?'s':'')}
+
+/* ═══════════════════════════════════════
+   UTILS
+═══════════════════════════════════════ */
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(_){}}
+function load(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(_){return null}}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true})}
+function toast(msg,type=''){
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;toastWrap.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+</script>
+</body>
+</html>
